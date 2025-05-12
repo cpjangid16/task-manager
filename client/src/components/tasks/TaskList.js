@@ -183,14 +183,25 @@ const TaskList = () => {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label="Category"
-              value={filters.category}
-              onChange={(e) =>
-                setFilters({ ...filters, category: e.target.value })
-              }
-            />
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={filters.category}
+                label="Category"
+                onChange={(e) =>
+                  setFilters({ ...filters, category: e.target.value })
+                }
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="Work">Work</MenuItem>
+                <MenuItem value="Personal">Personal</MenuItem>
+                <MenuItem value="Shopping">Shopping</MenuItem>
+                <MenuItem value="Health">Health</MenuItem>
+                <MenuItem value="Education">Education</MenuItem>
+                <MenuItem value="Finance">Finance</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
         </Grid>
       </Paper>
@@ -203,7 +214,7 @@ const TaskList = () => {
 
       <Grid container spacing={3}>
         {tasks.map((task) => (
-          <Grid item xs={12} sm={6} md={4} key={task._id}>
+          <Grid item xs={12} sm={6} md={4} key={task.id}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -223,13 +234,16 @@ const TaskList = () => {
                     label={task.priority}
                     color={getPriorityColor(task.priority)}
                     size="small"
+                    sx={{ mr: 1 }}
                   />
+                  {task.category && (
+                    <Chip
+                      label={task.category}
+                      variant="outlined"
+                      size="small"
+                    />
+                  )}
                 </Box>
-                {task.category && (
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    Category: {task.category}
-                  </Typography>
-                )}
                 {task.dueDate && (
                   <Typography variant="body2" sx={{ mt: 1 }}>
                     Due: {new Date(task.dueDate).toLocaleDateString()}
@@ -239,14 +253,14 @@ const TaskList = () => {
               <CardActions>
                 <Button
                   size="small"
-                  onClick={() => navigate(`/tasks/edit/${task._id}`)}
+                  onClick={() => navigate(`/tasks/edit/${task.id}`)}
                 >
                   Edit
                 </Button>
                 <Button
                   size="small"
                   color="error"
-                  onClick={() => handleDelete(task._id)}
+                  onClick={() => handleDelete(task.id)}
                 >
                   Delete
                 </Button>

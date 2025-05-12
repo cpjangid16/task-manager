@@ -12,6 +12,7 @@ import {
   Select,
   MenuItem,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import axios from 'axios';
 
@@ -57,6 +58,7 @@ const TaskForm = () => {
 
   const fetchTask = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         navigate(LOGIN_PATH);
@@ -69,13 +71,17 @@ const TaskForm = () => {
         }
       });
       
-      const taskData = response.data;
-      setTask({
-        ...taskData,
-        dueDate: taskData.dueDate
-          ? new Date(taskData.dueDate).toISOString().split('T')[0]
-          : '',
-      });
+      if (response.data.success) {
+        const taskData = response.data.data;
+        setTask({
+          ...taskData,
+          dueDate: taskData.dueDate
+            ? new Date(taskData.dueDate).toISOString().split('T')[0]
+            : '',
+        });
+      } else {
+        setError(response.data.message || 'Failed to fetch task');
+      }
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -83,6 +89,8 @@ const TaskForm = () => {
       } else {
         setError(err.response?.data?.message || 'Failed to fetch task');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -105,9 +113,15 @@ const TaskForm = () => {
       };
 
       if (id) {
-        await api.put(`/api/tasks/${id}`, task, config);
+        const response = await api.put(`/api/tasks/${id}`, task, config);
+        if (!response.data.success) {
+          throw new Error(response.data.message || 'Failed to update task');
+        }
       } else {
-        await api.post('/api/tasks', task, config);
+        const response = await api.post('/api/tasks', task, config);
+        if (!response.data.success) {
+          throw new Error(response.data.message || 'Failed to create task');
+        }
       }
       navigate(TASKS_PATH);
     } catch (err) {
@@ -115,7 +129,7 @@ const TaskForm = () => {
         localStorage.removeItem(AUTH_TOKEN_KEY);
         navigate(LOGIN_PATH);
       } else {
-        setError(err.response?.data?.message || 'Failed to save task');
+        setError(err.response?.data?.message || err.message || 'Failed to save task');
       }
     } finally {
       setLoading(false);
@@ -129,6 +143,16 @@ const TaskForm = () => {
       [name]: value,
     }));
   };
+
+  if (loading && id) {
+    return (
+      <Container maxWidth="sm">
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="sm">
@@ -188,14 +212,24 @@ const TaskForm = () => {
                 <MenuItem value="high">High</MenuItem>
               </Select>
             </FormControl>
-            <TextField
-              margin="normal"
-              fullWidth
-              label="Category"
-              name="category"
-              value={task.category}
-              onChange={handleChange}
-            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Category</InputLabel>
+              <Select
+                name="category"
+                value={task.category}
+                label="Category"
+                onChange={handleChange}
+              >
+                <MenuItem value="">None</MenuItem>
+                <MenuItem value="Work">Work</MenuItem>
+                <MenuItem value="Personal">Personal</MenuItem>
+                <MenuItem value="Shopping">Shopping</MenuItem>
+                <MenuItem value="Health">Health</MenuItem>
+                <MenuItem value="Education">Education</MenuItem>
+                <MenuItem value="Finance">Finance</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </Select>
+            </FormControl>
             <TextField
               margin="normal"
               fullWidth
@@ -213,6 +247,7 @@ const TaskForm = () => {
                 fullWidth
                 variant="outlined"
                 onClick={() => navigate(TASKS_PATH)}
+                disabled={loading}
               >
                 Cancel
               </Button>

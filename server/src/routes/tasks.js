@@ -9,19 +9,39 @@ const { Op } = require('sequelize');
 router.get('/', auth, async (req, res) => {
   try {
     console.log("inside the task fetching");
+    const { status, priority, category } = req.query;
+    
+    // Build where clause
+    const whereClause = {
+      [Op.or]: [
+        { createdBy: req.user.id },
+        { assignedTo: req.user.id }
+      ]
+    };
+
+    // Add filters if they exist
+    if (status) {
+      whereClause.status = status;
+    }
+    if (priority) {
+      whereClause.priority = priority;
+    }
+    if (category) {
+      whereClause.category = {
+        [Op.like]: `%${category}%`
+      };
+    }
+
     const tasks = await Task.findAll({
-      where: {
-        [Op.or]: [
-          { createdBy: req.user.id },
-          { assignedTo: req.user.id }
-        ]
-      },
+      where: whereClause,
       include: [
         { model: User, as: 'creator', attributes: ['id', 'username'] },
         { model: User, as: 'assignee', attributes: ['id', 'username'] }
-      ]
+      ],
+      order: [['createdAt', 'DESC']] // Sort by newest first
     });
-    console.log("this is the tasks",tasks);
+
+    console.log("this is the tasks", tasks);
     res.json({
       success: true,
       data: tasks
@@ -38,7 +58,7 @@ router.get('/', auth, async (req, res) => {
 // Create new task
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, description, status, priority, dueDate, assignedTo } = req.body;
+    const { title, description, status, priority, dueDate, assignedTo, category } = req.body;
     
     // Validate required fields
     if (!title) {
@@ -62,6 +82,7 @@ router.post('/', auth, async (req, res) => {
       description,
       status: status || 'pending',
       priority: priority || 'medium',
+      category: category || '',
       dueDate: formattedDueDate,
       assignedTo,
       createdBy: req.user.id
@@ -137,7 +158,7 @@ router.put('/:id', auth, async (req, res) => {
       });
     }
 
-    const { title, description, status, priority, dueDate, assignedTo } = req.body;
+    const { title, description, status, priority, dueDate, assignedTo, category } = req.body;
     
     // Format dueDate if provided
     let formattedDueDate = task.dueDate;
@@ -153,6 +174,7 @@ router.put('/:id', auth, async (req, res) => {
       description: description || task.description,
       status: status || task.status,
       priority: priority || task.priority,
+      category: category || task.category,
       dueDate: formattedDueDate,
       assignedTo: assignedTo || task.assignedTo
     });
